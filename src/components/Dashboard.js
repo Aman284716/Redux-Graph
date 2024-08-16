@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, LineElement, PointElement, Filler } from 'chart.js';
@@ -19,31 +19,51 @@ ChartJS.register(
 );
 
 const Dashboard = () => {
-  const expenses = useSelector((state) => state.expenses.expenses);
-  const income = useSelector((state) => state.income.income);
+  const { income, expenses } = useSelector((state) => ({
+    income: state.income.income,
+    expenses: state.expenses.expenses,
+  }));
+  const selectedUser = useSelector((state) => state.users.selectedUser);
 
-  const { monthlyIncome, monthlyExpenses } = getMonthlyData(income, expenses);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toLocaleString('default', { month: 'long' }));
+  const [months, setMonths] = useState([]);
+
+  const { monthlyIncome, monthlyExpenses } = getMonthlyData(income, expenses, selectedUser);
+
+  useEffect(() => {
+    if (selectedUser) {
+      const availableMonths = [...new Set([...Object.keys(monthlyIncome), ...Object.keys(monthlyExpenses)])];
+      setMonths(availableMonths);
+
+      if (!availableMonths.includes(selectedMonth)) {
+        setSelectedMonth(availableMonths[0] || new Date().toLocaleString('default', { month: 'long' }));
+      }
+    }
+  }, [selectedUser, income, expenses, selectedMonth]);
+
+  const filteredIncome = monthlyIncome[selectedMonth] || 0;
+  const filteredExpenses = monthlyExpenses[selectedMonth] || 0;
+
+  // Calculate total income and expenses based on selected user
+  const totalIncome = Object.values(monthlyIncome).reduce((a, b) => a + b, 0);
+  const totalExpenses = Object.values(monthlyExpenses).reduce((a, b) => a + b, 0);
 
   // Bar chart data
   const barData = {
-    labels: Object.keys(monthlyIncome),
+    labels: [selectedMonth],
     datasets: [
       {
         label: 'Income',
-        data: Object.values(monthlyIncome),
+        data: [filteredIncome],
         backgroundColor: 'rgba(75, 192, 192, 0.6)',
       },
       {
         label: 'Expenses',
-        data: Object.values(monthlyExpenses),
+        data: [filteredExpenses],
         backgroundColor: 'rgba(255, 99, 132, 0.6)',
       },
     ],
   };
-
-  // Total income and expenses
-  const totalIncome = Object.values(monthlyIncome).reduce((a, b) => a + b, 0);
-  const totalExpenses = Object.values(monthlyExpenses).reduce((a, b) => a + b, 0);
 
   // Pie chart data
   const pieData = {
@@ -57,35 +77,20 @@ const Dashboard = () => {
     ],
   };
 
-  const pieOptions = {
-    plugins: {
-      tooltip: {
-        callbacks: {
-          label: function (tooltipItem) {
-            const total = totalIncome + totalExpenses;
-            const value = tooltipItem.raw;
-            const percentage = ((value / total) * 100).toFixed(2);
-            return `${tooltipItem.label}: ${percentage}%`;
-          },
-        },
-      },
-    },
-  };
-
   // Line chart data
   const lineData = {
-    labels: Object.keys(monthlyIncome),
+    labels: months,
     datasets: [
       {
         label: 'Income',
-        data: Object.values(monthlyIncome),
+        data: months.map(month => monthlyIncome[month] || 0),
         borderColor: 'rgba(75, 192, 192, 1)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         fill: true,
       },
       {
         label: 'Expenses',
-        data: Object.values(monthlyExpenses),
+        data: months.map(month => monthlyExpenses[month] || 0),
         borderColor: 'rgba(255, 99, 132, 1)',
         backgroundColor: 'rgba(255, 99, 132, 0.2)',
         fill: true,
@@ -93,24 +98,27 @@ const Dashboard = () => {
     ],
   };
 
-  const lineOptions = {
-    plugins: {
-      legend: {
-        display: true,
-      },
-      tooltip: {
-        callbacks: {
-          label: function (tooltipItem) {
-            return `${tooltipItem.dataset.label}: ${tooltipItem.raw}`;
-          },
-        },
-      },
-    },
-  };
-
   return (
     <div className="w-full max-w-6xl mx-auto mt-10">
       <h2 className="text-xl text-center mb-5">Monthly Income & Expenses</h2>
+      <div className="flex justify-between mb-5">
+        <div>
+          <label className="mr-2">Month:</label>
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+            {months.map((month) => (
+              <option key={month} value={month}>{month}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mr-2">Total Income:</label>
+          <span>${totalIncome.toFixed(2)}</span>
+        </div>
+        <div>
+          <label className="mr-2">Total Expenses:</label>
+          <span>${totalExpenses.toFixed(2)}</span>
+        </div>
+      </div>
       <div className="flex flex-wrap justify-between gap-4">
         <div className="flex-1 min-w-[300px]">
           <h3 className="text-lg text-center mb-3">Bar Chart</h3>
@@ -118,11 +126,11 @@ const Dashboard = () => {
         </div>
         <div className="flex-1 min-w-[300px]">
           <h3 className="text-lg text-center mb-3">Pie Chart</h3>
-          <Pie data={pieData} options={pieOptions} />
+          <Pie data={pieData} />
         </div>
         <div className="flex-1 min-w-[300px]">
           <h3 className="text-lg text-center mb-3">Line Chart</h3>
-          <Line data={lineData} options={lineOptions} />
+          <Line data={lineData} />
         </div>
       </div>
     </div>

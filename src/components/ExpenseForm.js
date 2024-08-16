@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { addExpense } from '../redux/expensesSlice';
-import { v4 as uuidv4 } from 'uuid';
 
-const ExpenseForm = () => {
+const ExpenseForm = ({ onSubmit }) => {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
-  const dispatch = useDispatch();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    dispatch(addExpense({ id: uuidv4(), name, amount: parseFloat(amount) }));
+    onSubmit({ name, amount: parseFloat(amount) });
     setName('');
     setAmount('');
   };

@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { addIncome } from '../redux/incomeSlice';
-import { v4 as uuidv4 } from 'uuid';
 
-const IncomeForm = () => {
+const IncomeForm = ({ onSubmit }) => {
   const [source, setSource] = useState('');
   const [amount, setAmount] = useState('');
-  const dispatch = useDispatch();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    dispatch(addIncome({ id: uuidv4(), source, amount: parseFloat(amount), date: new Date() }));
+    onSubmit({ source, amount: parseFloat(amount) });
     setSource('');
     setAmount('');
   };
